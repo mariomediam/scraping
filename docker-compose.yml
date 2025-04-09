@@ -1,0 +1,23 @@
+# version: '3.9'
+services:
+  scraping:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    # networks:
+    #   - mi_red_personalizada    
+    networks:
+      mi_red_personalizada:
+        ipv4_address:  192.168.17.45
+    dns:
+      - 192.168.100.15
+      - 192.168.100.19    
+networks:
+  mi_red_personalizada:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.17.0/24
+          gateway: 192.168.17.1
