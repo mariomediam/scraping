@@ -43,7 +43,7 @@ class test_scraping(APIView):
             context = browser.new_context()         
             page = context.new_page()
 
-             # Variable para almacenar el token            
+            # Variable para almacenar el token            
             refresh_token = None
             access_token = None
 
@@ -92,4 +92,65 @@ class test_scraping(APIView):
             })
 
 
-          
+class login_siaf(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, format=None):
+
+        url = "https://apps.mef.gob.pe/weblanding/#/landing"
+
+        if not url:
+            return JsonResponse({
+                "message": 'No se proporcionó una URL',
+                "content": 'Por Mario Medina'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+        with sync_playwright() as playwright:        
+            browser = playwright.chromium.launch()   
+            context = browser.new_context()         
+            page = context.new_page()
+
+            # Variable para almacenar el token            
+            refresh_token = None
+            access_token = None
+
+            # Función para interceptar las respuestas
+            def handle_response(response):
+                nonlocal refresh_token, access_token
+                if "authorize.mef.gob.pe/auth/realms/mef/protocol/openid-connect/token" in response.url:  # Verifica si es la URL de la API de login
+                    try:
+                        data = response.json()                        
+                        refresh_token = data.get('refresh_token')
+                        access_token = data.get('access_token')
+                        if refresh_token and access_token:
+                            print("Refresh Token:", refresh_token)
+                            print("Access Token:", access_token)
+                    except Exception as e:
+                        print("Error al procesar la respuesta:", e)
+
+            # Escucha las respuestas
+            page.on("response", handle_response)
+
+            page.goto(url)      
+            time.sleep(3)
+            page.click("text='SIAF'")
+
+
+            page.wait_for_load_state('networkidle') 
+            page.fill("#username", "xxxxxxxxxx")
+            page.fill("#password", "yyyyyyyyyy")
+            time.sleep(7)
+            page.click("#kc-login")
+            page.wait_for_load_state('networkidle') 
+            title = page.title()
+            
+           
+            # Captura la pantalla
+            page.screenshot(path="screenshot.png")
+
+            # Cierra el navegador
+            browser.close()
+            return JsonResponse({
+                "message": f"El título de la página es: {title}",
+                "content": 'Por Mario Medina'
+            })
