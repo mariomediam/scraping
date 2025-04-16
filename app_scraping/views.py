@@ -10,6 +10,8 @@ from django.http import JsonResponse
 from playwright.sync_api import sync_playwright
 
 
+
+# mi_numero = 0
 # Clases base que puedes reutilizar
 class BaseAPIView(APIView):
     """Clase base para todas las vistas API"""
@@ -154,3 +156,20 @@ class login_siaf(APIView):
                 "message": f"El título de la página es: {title}",
                 "content": 'Por Mario Medina'
             })
+
+
+class incrementar_numero(APIView):
+    permission_classes = [AllowAny]
+
+    def __init__(self):        
+        self.numero = 0
+        
+    def get(self, request, format=None):
+
+        self.numero += 1
+        mi_numero = self.numero
+        print(mi_numero)
+        return JsonResponse({
+            "message": f"El Número es: {mi_numero}",
+            "content": 'Por Mario Medina'
+        }) 
