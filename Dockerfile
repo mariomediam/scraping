@@ -17,8 +17,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 RUN playwright install
 RUN playwright install-deps
 
-RUN echo "192.168.100.59 sistemasmpp" >> /etc/hosts
-
 # Copiar el resto del código de la aplicación
 COPY . /app/
 
