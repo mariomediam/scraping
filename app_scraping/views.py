@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+import requests
 from rest_framework import status
 from django.http import JsonResponse
 from datetime import datetime
@@ -28,7 +29,7 @@ cache.set("is_login", False, None)  # timeout=None para que no expire
 tokens = {}
 cache.set("tokens", tokens, timeout=60)  # timeout=None para que no expire
 
-
+URL_SIAF_DEVENGADOS = "https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados"
 
 
 # mi_numero = 0
@@ -454,32 +455,74 @@ class siaf_leer_devengado(RetrieveAPIView):
         siaf_manager = SIAFTokenManager2()
         access_token = siaf_manager.get_access_token()
 
+        print("*********** access_token ***********", access_token)
+
 #         curl --location 'https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/2025/3318/2' \
 # --header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJBeGxPdUtBVjBMN0xCa2k5VHhTcmxCaE92QUZzdzNCQjF3RWRfQmlXaGdJIn0.eyJleHAiOjE3NTEwNTAzNDMsImlhdCI6MTc1MTA0Njc0MywiYXV0aF90aW1lIjoxNzUxMDQ2NzQxLCJqdGkiOiI5MTM5OWEyMC05MDQxLTRkOWItYTI1MS0zNDYxNGRiN2YxODgiLCJpc3MiOiJodHRwczovL2F1dGhvcml6ZS5tZWYuZ29iLnBlL2F1dGgvcmVhbG1zL21lZiIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJmOjM2MGVjNWEwLTBlMjctNDM2OS04NzgxLTAwYzg4ZjMzMzc1MzowMjg5NzA0MSIsInR5cCI6IkJlYXJlciIsImF6cCI6Imp3dENsaWVudCIsInNlc3Npb25fc3RhdGUiOiJkZmNlMWZlNC02OWU0LTQzNjUtODFiMi1mZmE4Zjc3NTc0MjciLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHJlYWQgd3JpdGUgcHJvZmlsZSIsInNpZCI6ImRmY2UxZmU0LTY5ZTQtNDM2NS04MWIyLWZmYThmNzc1NzQyNyIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiYXBlbGxpZG9wYXRlcm5vIjoiTUVESU5BIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiMDI4OTcwNDEiLCJnaXZlbl9uYW1lIjoiTUFSSU8gQUxFWEFOREVSIiwibm9tYnJlIjoiTUFSSU8gQUxFWEFOREVSIiwibm9tYnJldXN1YXJpbyI6Ik1BUklPIEFMRVhBTkRFUiBNRURJTkEgTUFSUVVFWiIsInVuaWRhZGVqZWN1dG9yYSI6IjMwMTUyOSIsImVudGlkYWQiOiJNVU5JQ0lQQUxJREFEIFBST1ZJTkNJQUwgREUgUElVUkEiLCJhcGVsbGlkb21hdGVybm8iOiJNQVJRVUVaIiwibmFtZSI6Ik1BUklPIEFMRVhBTkRFUiBNRURJTkEgTUFSUVVFWiIsImZhbWlseV9uYW1lIjoiTUVESU5BIE1BUlFVRVoiLCJ0aXBvdW5pZGFkIjoiTSIsInVzZXJuYW1lIjoiMDI4OTcwNDEifQ.DAw6jdEiv3i0S74fvxNzKz3De_rI_P7qRa4-KsCH6CWrmq55FtFWBdII2eVQQTj-QyLxPW-NHIujaBoHHLeJSYxuUyeepn2zZnEGw8W91CYlhQHrgMq1uXv8UM6HqgIgbG9aATCOdNLGCgN1_ChXauL1VYA5bNBG7tNnfQYX7h_FWEAoiZsncaxswhInD1jjlANexy8OPo0MHsJS_gfybWbV4f7H8nzfy1lUM55PtwXRRJcssR6m99_QVbVdMabsPJexCbw_0Lrl_9I_3MHxdfTu8v04E8mU8nj073Q3FDgri7TpEYdKQ3Y9LHFnrFgRos0SgiHt3RxMu2OHscKXyQ' \
 # --header 'Cookie: incap_ses_8221_3160769=jclrZoFu8g+DRMr5SdwWchfdXmgAAAAAI7iMQDUt5WbFT1VCrzRCdw==; visid_incap_3160769=a4l3QqtbQQWe2KXk0ZyOiOyT2WcAAAAAQUIPAAAAAADAibZD6YD3So1rQbWfeR15; visid_incap_3160770=pEBgpNY5SpCb0QVwfLp6AT5X7WcAAAAAQUIPAAAAAABmHIqs7P2d5TqLB0zytyhB'
         
-        # if not tokens:
-        #     return JsonResponse({
-        #         "error": "No hay tokens almacenados",
-        #         "content": "Por Mario Medina"
-        #     }, status=status.HTTP_404_NOT_FOUND)
+        if not access_token:
+            return JsonResponse({
+                "error": "No hay tokens almacenados",
+                "content": "Por Mario Medina"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # url = f"https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/{ano_eje}/{expediente}/{secuencia}"
+        url = f"https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/{ano_eje}/{expediente}/{secuencia}"
+        headers = {
+            "Authorization": f"Bearer {access_token}",            
+        }
+        # "Cookie": "incap_ses_8221_3160769=jclrZoFu8g+DRMr5SdwWchfdXmgAAAAAI7iMQDUt5WbFT1VCrzRCdw==; visid_incap_3160769=a4l3QqtbQQWe2KXk0ZyOiOyT2WcAAAAAQUIPAAAAAADAibZD6YD3So1rQbWfeR15; visid_incap_3160770=pEBgpNY5SpCb0QVwfLp6AT5X7WcAAAAAQUIPAAAAAABmHIqs7P2d5TqLB0zytyhB"
+        # response = requests.get(url, headers=headers)
+        # response_json = response.json()
+        response_json = {
+            "message": "Tokens obtenidos exitosamente",
+            "content": "Por Mario Medina"
+        }
         
         
-        # print("*********** access_token ***********", access_token)
+        
+        
+        
+        # # print("*********** access_token ***********", access_token)
         tokens_siaf = cache.get("tokens_siaf", None)
-        # print("*********** tokens_siaf ***********", tokens_siaf)
+        # # print("*********** tokens_siaf ***********", tokens_siaf)
         # 'refresh_token_expires_at': 1751307677.9027617
-        #  convertir a datetime
+        # #  convertir a datetime
         refresh_token_expires_at = datetime.fromtimestamp(tokens_siaf.get("refresh_token_expires_at", 0))
         print("*********** refresh_token_expires_at ***********", refresh_token_expires_at)
-        # imprime hora actual
+        # # imprime hora actual
         print("*********** hora actual ***********", datetime.now())
-        # imprime la diferencia en segundos
+        # # imprime la diferencia en segundos
         print("*********** diferencia en segundos ***********", (refresh_token_expires_at - datetime.now()).total_seconds())
-        access_token = tokens_siaf.get("access_token", None)
-        print("*********** access_token ***********", access_token)
+        # access_token = tokens_siaf.get("access_token", None)
+        # print("*********** access_token ***********", access_token)
 
         return JsonResponse({
             "message": "Tokens obtenidos exitosamente",
-            "content": "Por Mario Medina"
+            "content": response_json
         })
+    
+
+def siaf_buscar_devengados(ano_eje, expediente, secuencia=None):
+    try:
+        siaf_manager = SIAFTokenManager2()
+        access_token = siaf_manager.get_access_token()
+
+        if not access_token:
+            raise Exception("No hay tokens almacenados")
+        
+        url = f"{URL_SIAF_DEVENGADOS}/{ano_eje}/{expediente}"
+
+        if secuencia:
+            url = f"{url}/{secuencia}"
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",            
+        }
+        response = requests.get(url, headers=headers)
+        response_json = response.json()
+        return response_json
+    except Exception as e:
+        raise Exception(f"Error al buscar devengados: {e}")
+    
