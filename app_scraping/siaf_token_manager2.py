@@ -66,6 +66,47 @@ def calculate_token_duration(token: str) -> Optional[int]:
 
 class SIAFTokenManager2:
 
+    def acquire_get_tokens_lock(self) -> bool:
+        """
+        Adquiere un lock para evitar múltiples logins simultáneos
+        """
+        try:
+            print("*********** acquire_get_tokens_lock ***********")
+            return cache.add(self.get_tokens_lock_key(), True, timeout=60)  # 60 segundos de lock
+        except Exception as e:
+            logger.error(f"Error al adquirir login lock: {e}")
+            return False
+    
+    def release_get_tokens_lock(self) -> bool:
+        """
+        Libera el lock de login
+        """
+        try:
+            print("*********** release_get_tokens_lock ***********")
+            cache.delete(self.get_tokens_lock_key())
+            return True
+        except Exception as e:
+            logger.error(f"Error al liberar login lock: {e}")
+            return False
+        
+    def get_tokens_lock_key(self):
+        """
+        Retorna la clave del lock para evitar múltiples logins simultáneos
+        """
+        return "get_tokens_lock_key"
+    
+    def is_lock_active(self):
+        """
+        Verifica si el lock está activo (True) o inactivo (False)
+        """
+        try:
+            print("*********** is_lock_active ***********")
+            print("*********** cache.get('get_tokens_lock_key') ***********", cache.get("get_tokens_lock_key", False))
+            return cache.get("get_tokens_lock_key", False)
+        except Exception as e:
+            logger.error(f"Error al verificar si el lock está activo: {e}")
+            return False
+
 
     def login_siaf(self, username, password):
         try:
@@ -130,9 +171,7 @@ class SIAFTokenManager2:
             current_time = time.time()
             expires_in = calculate_token_duration(access_token)
             refresh_expires_in = calculate_token_duration(refresh_token)
-
-            timeout = refresh_expires_in 
-            
+            timeout = refresh_expires_in             
 
             tokens = {
                 "access_token": access_token,
@@ -154,35 +193,65 @@ class SIAFTokenManager2:
     def get_access_token(self):
         try:
 
+            # Verificar si ya hay un lock
+            if self.is_lock_active():
+                print("*********** AAAAAAA ***********")
+                return cache.get("tokens_siaf", None).get("access_token", None)
+                       
+            
             if not self.refresh_token_is_valid():
+                print("*********** BBBBBBB ***********")
+                self.acquire_get_tokens_lock()
+                print("*********** CCCCCCC ***********")
                 access_token, refresh_token = self.login_siaf("02897041", "Yvjv971p@")
+                print("*********** DDDDDDD ***********")
                 self.save_tokens(access_token, refresh_token)              
+                print("*********** EEEEEEE ***********")
+                self.release_get_tokens_lock()
+                print("*********** FFFFFFF ***********")
             else:
                 if self.is_necesary_renew_tokens():
+                    print("*********** GGGGGGG ***********")
+                    self.acquire_get_tokens_lock()
+                    print("*********** HHHHHHH ***********")
                     tokens = cache.get("tokens_siaf", None)
                     refresh_token = tokens.get("refresh_token", None)
+                    print("*********** IIIIIII ***********")
                     client_secret = "aa0c08b2-87d9-466e-88fc-26c2e8170c9d"
+                    print("*********** JJJJJJJ ***********")
                     access_token, refresh_token = self.renew_tokens(refresh_token, client_secret)
+                    print("*********** KKKKKKK ***********")
                     self.save_tokens(access_token, refresh_token)
-                    
+                    print("*********** LLLLLLL ***********")
+                    self.release_get_tokens_lock()
+                    print("*********** MMMMMMM ***********")
+                          
+            
+            print("*********** NNNNNNN ***********")
             return cache.get("tokens_siaf", None).get("access_token", None)
             
 
         except Exception as e:
+            self.release_get_tokens_lock()
             print(f"Error al obtener los tokens: {e}")
             return e
+        
         
 
     def refresh_token_is_valid(self):
         try:
-            print("*********** refresh_token_is_valid ***********")
+            print("*********** OOOOOOO ***********")
             tokens = cache.get("tokens_siaf", None)
             if not tokens:
+                print("*********** PPPPPPP ***********")
                 return False
             
+            print("*********** QQQQQQQ ***********")
             if tokens.get("refresh_token_expires_at", 0) < time.time():
+                print("*********** RRRRRRR ***********")
                 return False
             
+            print("*********** SSSSSSS ***********")
             return True
         except Exception as e:
             print(f"Error al verificar si el token de refresh es válido: {e}")
@@ -231,11 +300,19 @@ class SIAFTokenManager2:
         try:
             tokens = cache.get("tokens_siaf", None)
             if not tokens:
+                print("*********** TTTTTTT ***********")
                 return False
             
-            if tokens.get("refresh_token_expires_at", 0) < time.time() - TOKEN_REFRESH_THRESHOLD:
+            print("*********** mirando tokens ***********")
+            print("*********** tokens.get('refresh_token_expires_at', 0) ***********", tokens.get("refresh_token_expires_at", 0))
+            print("*********** time.time() + TOKEN_REFRESH_THRESHOLD ***********", time.time() + TOKEN_REFRESH_THRESHOLD)
+            print("*********** tokens.get('refresh_token_expires_at', 0) < time.time() - TOKEN_REFRESH_THRESHOLD ***********", tokens.get("refresh_token_expires_at", 0) < time.time() - TOKEN_REFRESH_THRESHOLD)   
+            
+            if tokens.get("refresh_token_expires_at", 0) < time.time() + TOKEN_REFRESH_THRESHOLD:
+                print("*********** UUUUUUU ***********")
                 return True
             
+            print("*********** VVVVVVV ***********")
             return False
             
         except Exception as e:
