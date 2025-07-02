@@ -29,7 +29,7 @@ cache.set("is_login", False, None)  # timeout=None para que no expire
 tokens = {}
 cache.set("tokens", tokens, timeout=60)  # timeout=None para que no expire
 
-URL_SIAF_DEVENGADOS = "https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados"
+URL_SIAF_API = "https://apps.mef.gob.pe/v1/siaf-services"
 
 
 # mi_numero = 0
@@ -439,72 +439,85 @@ class siaf_leer_devengado(RetrieveAPIView):
     queryset = None
     serializer_class = None
 
-    def get(self, request):
-        print("*********** 1 ***********")
+    def get(self, request):        
         ano_eje = request.query_params.get('ano_eje', None)
-        expediente = request.query_params.get('expediente', None)
-        secuencia = request.query_params.get('secuencia', None)
+        expediente = request.query_params.get('expediente', None)        
 
-        if not ano_eje or not expediente or not secuencia:
+        if not ano_eje or not expediente:
             return JsonResponse({
-                "error": "Faltan parámetros requeridos",
-                "content": "Por Mario Medina"
+                "message": "Faltan parámetros requeridos",
+                "content": None
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Obtener los tokens SIAF
-        siaf_manager = SIAFTokenManager2()
-        access_token = siaf_manager.get_access_token()
-
-        print("*********** access_token ***********", access_token)
-
-#         curl --location 'https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/2025/3318/2' \
-# --header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJBeGxPdUtBVjBMN0xCa2k5VHhTcmxCaE92QUZzdzNCQjF3RWRfQmlXaGdJIn0.eyJleHAiOjE3NTEwNTAzNDMsImlhdCI6MTc1MTA0Njc0MywiYXV0aF90aW1lIjoxNzUxMDQ2NzQxLCJqdGkiOiI5MTM5OWEyMC05MDQxLTRkOWItYTI1MS0zNDYxNGRiN2YxODgiLCJpc3MiOiJodHRwczovL2F1dGhvcml6ZS5tZWYuZ29iLnBlL2F1dGgvcmVhbG1zL21lZiIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJmOjM2MGVjNWEwLTBlMjctNDM2OS04NzgxLTAwYzg4ZjMzMzc1MzowMjg5NzA0MSIsInR5cCI6IkJlYXJlciIsImF6cCI6Imp3dENsaWVudCIsInNlc3Npb25fc3RhdGUiOiJkZmNlMWZlNC02OWU0LTQzNjUtODFiMi1mZmE4Zjc3NTc0MjciLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHJlYWQgd3JpdGUgcHJvZmlsZSIsInNpZCI6ImRmY2UxZmU0LTY5ZTQtNDM2NS04MWIyLWZmYThmNzc1NzQyNyIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiYXBlbGxpZG9wYXRlcm5vIjoiTUVESU5BIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiMDI4OTcwNDEiLCJnaXZlbl9uYW1lIjoiTUFSSU8gQUxFWEFOREVSIiwibm9tYnJlIjoiTUFSSU8gQUxFWEFOREVSIiwibm9tYnJldXN1YXJpbyI6Ik1BUklPIEFMRVhBTkRFUiBNRURJTkEgTUFSUVVFWiIsInVuaWRhZGVqZWN1dG9yYSI6IjMwMTUyOSIsImVudGlkYWQiOiJNVU5JQ0lQQUxJREFEIFBST1ZJTkNJQUwgREUgUElVUkEiLCJhcGVsbGlkb21hdGVybm8iOiJNQVJRVUVaIiwibmFtZSI6Ik1BUklPIEFMRVhBTkRFUiBNRURJTkEgTUFSUVVFWiIsImZhbWlseV9uYW1lIjoiTUVESU5BIE1BUlFVRVoiLCJ0aXBvdW5pZGFkIjoiTSIsInVzZXJuYW1lIjoiMDI4OTcwNDEifQ.DAw6jdEiv3i0S74fvxNzKz3De_rI_P7qRa4-KsCH6CWrmq55FtFWBdII2eVQQTj-QyLxPW-NHIujaBoHHLeJSYxuUyeepn2zZnEGw8W91CYlhQHrgMq1uXv8UM6HqgIgbG9aATCOdNLGCgN1_ChXauL1VYA5bNBG7tNnfQYX7h_FWEAoiZsncaxswhInD1jjlANexy8OPo0MHsJS_gfybWbV4f7H8nzfy1lUM55PtwXRRJcssR6m99_QVbVdMabsPJexCbw_0Lrl_9I_3MHxdfTu8v04E8mU8nj073Q3FDgri7TpEYdKQ3Y9LHFnrFgRos0SgiHt3RxMu2OHscKXyQ' \
-# --header 'Cookie: incap_ses_8221_3160769=jclrZoFu8g+DRMr5SdwWchfdXmgAAAAAI7iMQDUt5WbFT1VCrzRCdw==; visid_incap_3160769=a4l3QqtbQQWe2KXk0ZyOiOyT2WcAAAAAQUIPAAAAAADAibZD6YD3So1rQbWfeR15; visid_incap_3160770=pEBgpNY5SpCb0QVwfLp6AT5X7WcAAAAAQUIPAAAAAABmHIqs7P2d5TqLB0zytyhB'
+        response_json = siaf_buscar_devengado(ano_eje, expediente)
         
-        if not access_token:
+        if not response_json:
             return JsonResponse({
-                "error": "No hay tokens almacenados",
-                "content": "Por Mario Medina"
-            }, status=status.HTTP_404_NOT_FOUND)
+                "message": "No se encontraron devengados",
+                "content": []
+            }, status=status.HTTP_200_OK)
         
-        # url = f"https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/{ano_eje}/{expediente}/{secuencia}"
-        url = f"https://apps.mef.gob.pe/v1/siaf-services/devengado/devengados/{ano_eje}/{expediente}/{secuencia}"
-        headers = {
-            "Authorization": f"Bearer {access_token}",            
-        }
-        # "Cookie": "incap_ses_8221_3160769=jclrZoFu8g+DRMr5SdwWchfdXmgAAAAAI7iMQDUt5WbFT1VCrzRCdw==; visid_incap_3160769=a4l3QqtbQQWe2KXk0ZyOiOyT2WcAAAAAQUIPAAAAAADAibZD6YD3So1rQbWfeR15; visid_incap_3160770=pEBgpNY5SpCb0QVwfLp6AT5X7WcAAAAAQUIPAAAAAABmHIqs7P2d5TqLB0zytyhB"
-        # response = requests.get(url, headers=headers)
-        # response_json = response.json()
-        response_json = {
-            "message": "Tokens obtenidos exitosamente",
-            "content": "Por Mario Medina"
-        }
+        devengados_list = []
+        for item in response_json:
+            secuencia = item.get("secuencia")
+            devengado = siaf_buscar_devengado_by_secuencia(ano_eje, expediente, secuencia)            
+            devengado["detalle"]["expediente"] = expediente
+            devengado["detalle"]["secuencia"] = secuencia
+            formatted_devengado = aplicar_formato_devengado(devengado)
+            devengados_list.append(formatted_devengado)
+
         
-        
-        
-        
-        
-        # # print("*********** access_token ***********", access_token)
-        tokens_siaf = cache.get("tokens_siaf", None)
-        # # print("*********** tokens_siaf ***********", tokens_siaf)
-        # 'refresh_token_expires_at': 1751307677.9027617
-        # #  convertir a datetime
-        refresh_token_expires_at = datetime.fromtimestamp(tokens_siaf.get("refresh_token_expires_at", 0))
-        print("*********** refresh_token_expires_at ***********", refresh_token_expires_at)
-        # # imprime hora actual
-        print("*********** hora actual ***********", datetime.now())
-        # # imprime la diferencia en segundos
-        print("*********** diferencia en segundos ***********", (refresh_token_expires_at - datetime.now()).total_seconds())
-        # access_token = tokens_siaf.get("access_token", None)
-        # print("*********** access_token ***********", access_token)
 
         return JsonResponse({
-            "message": "Tokens obtenidos exitosamente",
-            "content": response_json
+            "message": "",
+            "content": devengados_list
         })
     
 
-def siaf_buscar_devengados(ano_eje, expediente, secuencia=None):
+def siaf_buscar_devengado(ano_eje, expediente, secuencia=None):
+    try:
+        siaf_manager = SIAFTokenManager2()
+        access_token = siaf_manager.get_access_token()
+        print("*********** access_token ***********", access_token)
+
+        if not access_token:
+            raise Exception("No hay tokens almacenados")
+        
+        
+        
+        url = f"{URL_SIAF_API}/devengado/devengados?anio={ano_eje}&expediente={expediente}&page=0&page_size=10&sort=-"
+
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",            
+        }
+        response = requests.get(url, headers=headers)
+        response_json = response.json()        
+        content_list = response_json.get("content", [])
+        
+        if content_list and len(content_list) > 0:
+            # Tomar el primer elemento de la lista content
+            first_item = content_list[0]
+            
+            # Obtener la lista de contenido del primer item
+            contenido_list = first_item.get("contenido", [])
+            
+            # solo los que fase sea D
+            filtered_content = [item for item in contenido_list if item.get("fase") == "D"]
+            return filtered_content
+        return []
+
+
+
+
+
+
+    except Exception as e:
+        raise Exception(f"Error al buscar devengados: {e}")
+    
+
+
+def siaf_buscar_devengado_by_secuencia(ano_eje, expediente, secuencia):
     try:
         siaf_manager = SIAFTokenManager2()
         access_token = siaf_manager.get_access_token()
@@ -512,10 +525,7 @@ def siaf_buscar_devengados(ano_eje, expediente, secuencia=None):
         if not access_token:
             raise Exception("No hay tokens almacenados")
         
-        url = f"{URL_SIAF_DEVENGADOS}/{ano_eje}/{expediente}"
-
-        if secuencia:
-            url = f"{url}/{secuencia}"
+        url = f"{URL_SIAF_API}/devengado/devengados/{ano_eje}/{expediente}/{secuencia}"
 
         headers = {
             "Authorization": f"Bearer {access_token}",            
@@ -524,5 +534,214 @@ def siaf_buscar_devengados(ano_eje, expediente, secuencia=None):
         response_json = response.json()
         return response_json
     except Exception as e:
-        raise Exception(f"Error al buscar devengados: {e}")
+        raise Exception(f"Error al buscar devengado por secuencia: {e}")
     
+
+def aplicar_formato_devengado(devengado):
+    try:
+
+        # este es el formato de entrada
+        # {
+#     "detalle": {
+#         "anio": 2025,
+#         "entidad": 301529,
+#         "entidadRuc": 20154477374,
+#         "correlativo": 1,
+#         "entidadDestino": 5000,
+#         "entidadDestinoNombre": "MEF - TESORO PÚBLICO",
+#         "area": 0,
+#         "areaNombre": "MUNICIPALIDAD PROVINCIAL DE PIURA",
+#         "tipoOperacion": "N",
+#         "tipoOperacionDescripcion": "GASTO - ADQUISICION DE BIENES Y SERVICIOS",
+#         "expedienteFinanciamiento": 0,
+#         "modalidadCompra": "CA",
+#         "modalidadCompraDescripcion": "LEY DE CONTRATACIONES DEL ESTADO",
+#         "faseContractual": "P",
+#         "faseContractualDescripcion": "PAGO_TOTAL O PAGO A CUENTA",
+#         "tipoProcesoSeleccion": "18",
+#         "tipoProcesoSeleccionDescripcion": "ADJUDICACION SIN PROCESO",
+#         "idContrato": null,
+#         "idProceso": null,
+#         "ceamOceDetId": null,
+#         "ciclo": "G",
+#         "cicloDescripcion": "Gasto",
+#         "fase": "D",
+#         "faseDescripcion": "DEVENGADO",
+#         "certificado": 931,
+#         "certificadoSecuencia": 2,
+#         "proveedorTipoId": "1",
+#         "proveedorTipoIdDescripcion": "RUC",
+#         "proveedorNumeroDocumento": 10731443853,
+#         "proveedorNombre": "VALLADOLID GUTIERREZ DELIA GABRIELA",
+#         "entidadReciproca": null,
+#         "entidadReciprocaNombre": null,
+#         "fuenteFinanc": "1",
+#         "rubro": "00",
+#         "rubroNombre": "RECURSOS ORDINARIOS",
+#         "convenioProyecto": "0",
+#         "convenioProyectoDescripcion": "Sin Proyecto",
+#         "moneda": "S/.",
+#         "monedaDescripcion": "Nuevo Sol",
+#         "tipoCambio": 1,
+#         "monto": 21000,
+#         "montoNacional": 21000,
+#         "codDoc": "027",
+#         "codDocNombre": "RECIBO POR HONORARIOS PROFESIONALES",
+#         "numDoc": "13",
+#         "serie": "E001",
+#         "fechaDoc": "2025-04-30",
+#         "tipoPago": "E",
+#         "tipoPagoDescripcion": "EFECTIVO",
+#         "tipoRecurso": "0",
+#         "tipoRecursoDescripcion": "RECURSOS ORDINARIOS",
+#         "viajaBanco": "S",
+#         "tipoCompromiso": "11",
+#         "tipoCompromisoDescripcion": "MES VIGENTE",
+#         "estadoRegistro": "A",
+#         "estadoRegistroDescripcion": "APROBADO",
+#         "notas": "DEVENGADO O/S Nro 0000485 - SERVICIOS DE UN ASISTENTE TÉCNICO EN MONITOREO DE OBRA PARA LA OBRA  REHABILITACIÓN DE REDES DE AGUA POTABLE Y ALCANTARILLADO EN EL AH ALMIRANTE MIGUEL GRAU I Y II ETAPA- PRIMER ENTREGABLE  DEL DISTRITO DE PIURA POR 180 DÍAS S/ 21,000.00 SEIS ENTREGABLES -CONFORMIDAD CON INFORME N° 900-2025-SGO-GDTYGI/MPP",
+#         "tipoRegistro": "N",
+#         "codMensa": "0000",
+#         "codMensaDescripcion": "NORMAL",
+#         "usuario": "02892329",
+#         "fecha": "2025-04-30",
+#         "totalFase": 21000,
+#         "totalFaseSiguiente": 3500,
+#         "totalModificaciones": -17500,
+#         "totalModificacionesAprobadas": -17500,
+#         "saldo": 0,
+#         "saldoAprobado": 0,
+#         "codDocConformidad": "001",
+#         "codDocConformidadDescripcion": "ACTA DE CONFORMIDAD",
+#         "numDocConformidad": "730-2025",
+#         "fechaDocConformidad": "2025-04-23",
+#         "tipoCambioPs": null,
+#         "clasificadores": [
+#             {
+#                 "idClasificador": "ACbcxSj",
+#                 "clasificador": "2.6.8 1.4 3",
+#                 "clasificadorDescripcion": "GASTO POR LA CONTRATACION DE SERVICIOS",
+#                 "monto": 21000,
+#                 "montoNacional": 21000,
+#                 "secuencia": 0,
+#                 "metas": [
+#                     {
+#                         "secFunc": 23,
+#                         "metaNombre": "MEJORAMIENTO DE SISTEMAS DE AGUA POTABLE Y ALCANTARILLADO",
+#                         "monto": 21000,
+#                         "montoNacional": 21000
+#                     }
+#                 ]
+#             }
+#         ]
+#     },
+#     "modificaciones": [
+#         {
+#             "correlativo": 2,
+#             "tipoRegistro": "C",
+#             "tipoRegistroDescripcion": "'REBAJA (T.C. FAVORABLE')",
+#             "estadoRegistro": "A",
+#             "estadoRegistroDescripcion": "APROBADO",
+#             "codDoc": "027",
+#             "codDocNombre": "RECIBO POR HONORARIOS PROFESIONALES",
+#             "numDoc": "13",
+#             "fechaDoc": "2025-04-30",
+#             "serie": "E001",
+#             "moneda": "S/.",
+#             "monedaDescripcion": "Nuevo Sol",
+#             "tipoCambio": 1,
+#             "monto": -17500,
+#             "notas": "POR REBAJA SEGUN RECIBO POR HONORARIO E001-13 POR EL IMPORTE DE S/.3,500.00",
+#             "usuario": "02892329",
+#             "fecha": "2025-05-05",
+#             "hora": "09:38:26",
+#             "codMensa": "0000",
+#             "codMensaDescripcion": "NORMAL",
+#             "clasificadores": [
+#                 {
+#                     "idClasificador": "ACbcxSj",
+#                     "clasificador": "2.6.8 1.4 3",
+#                     "clasificadorDescripcion": "GASTO POR LA CONTRATACION DE SERVICIOS",
+#                     "monto": -17500,
+#                     "montoNacional": -17500,
+#                     "secuencia": 0,
+#                     "metas": [
+#                         {
+#                             "secFunc": 23,
+#                             "metaNombre": "MEJORAMIENTO DE SISTEMAS DE AGUA POTABLE Y ALCANTARILLADO",
+#                             "monto": -17500,
+#                             "montoNacional": -17500
+#                         }
+#                     ]
+#                 }
+#             ]
+#         }
+#     ],
+#     "saldos": [
+#         {
+#             "idClasificador": "ACbcxSj",
+#             "clasificador": "2.6.8 1.4 3",
+#             "clasificadorDescripcion": "GASTO POR LA CONTRATACION DE SERVICIOS",
+#             "secuencia": 0,
+#             "monto": 7000.00,
+#             "montoNacional": 7000.00,
+#             "saldo": 0.00,
+#             "saldoAprobado": 0.00,
+#             "metas": []
+#         }
+#     ],
+#     "acciones": {
+#         "anular": false,
+#         "ampliar": true,
+#         "rebajar": false,
+#         "devolver": true,
+#         "insertar": false,
+#         "rebajaTc": false
+#     }
+# }
+
+        # este es el formato de salida
+        # {
+        #     "ANO_EJE": "2025",
+        #     "EXPEDIENTE": "0000001854",
+        #     "CICLO": "G",
+        #     "FASE": "D",
+        #     "SECUENCIA": "0002",
+        #     "CORRELATIVO": "0001",
+        #     "COD_DOC": "027",
+        #     "ABREVIATURA": "RECIB. HON. PROF.   ",
+        #     "SERIE_DOC": "E001",
+        #     "NUM_DOC": "13",
+        #     "FECHA_DOC": "2025-04-30",
+        #     "FUENTE_FINANC": "00",
+        #     "TIPO_RECURSO": "0 ",
+        #     "RUC": "10731443853",
+        #     "NOMBRE": "VALLADOLID GUTIERREZ DELIA GABRIELA",
+        #     "MONTO_NACIONAL": 3500.0,
+        #     "GLOSA": "DEVENGADO O/S Nro 0000485 - SERVICIOS DE UN ASISTENTE T+CNICO EN MONITOREO DE OBRA PARA LA OBRA  REHABILITACIËN DE REDESDE AGUA POTABLE Y ALCANTARILLADO EN EL AH ALMIRANTE MIGUELGRAU I Y II ETAPA- PRIMER ENTREGABLE  DEL DISTRITO DE PIURAPOR 180 D-AS S/ 21,000.00 SEIS ENTREGABLES -CONFORMIDAD CONINFORME N¦ 900-2025-SGO-GDTYGI/MPP"
+        # }
+
+        detalle = devengado.get("detalle")
+        formatted_devengado = {
+            "ANO_EJE": detalle.get("anio"),
+            "EXPEDIENTE": detalle.get("expediente"),
+            "CICLO": detalle.get("ciclo"),
+            "FASE": detalle.get("fase"),
+            "SECUENCIA": detalle.get("secuencia"),
+            "CORRELATIVO": detalle.get("correlativo"),
+            "COD_DOC": detalle.get("codDoc"),
+            "ABREVIATURA": detalle.get("codDocNombre"),
+            "SERIE_DOC": detalle.get("serie"),
+            "NUM_DOC": detalle.get("numDoc"),
+            "FECHA_DOC": detalle.get("fechaDoc"),
+            "FUENTE_FINANC": detalle.get("rubro"),
+            "TIPO_RECURSO": detalle.get("tipoRecurso"),
+            "RUC": detalle.get("proveedorNumeroDocumento"),        
+            "NOMBRE": detalle.get("proveedorNombre"),
+            "MONTO_NACIONAL": detalle.get("totalFaseSiguiente"),
+            "GLOSA": detalle.get("notas")
+        }
+
+        return formatted_devengado
+    except Exception as e:
+        raise Exception(f"Error al aplicar formato a devengado: {e}")
